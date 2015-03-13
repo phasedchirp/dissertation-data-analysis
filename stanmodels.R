@@ -1,3 +1,4 @@
+library(coda)
 library(rstan)
 source("~/Dropbox/Programming/R/doing bayesian analysis/DBDA2Eprograms/DBDA2E-utilities2.R")
 
@@ -71,16 +72,18 @@ trainMCMC = sampling( object=trainStan ,
                       warmup = 500 , 
                       thin = 1 )
 
-traceplot(trainMCMC,pars=c("alpha"))
+traceplot(trainMCMC,pars=c("alpha","bF2","bF0","bD2","bD0","f2i0","f0i0"))
 
 trainCoda = mcmc.list( lapply( 1:ncol(trainMCMC) , 
                               function(x) { mcmc(as.array(trainMCMC)[,x,]) } ) )
 
-for ( parName in c("alpha","bF2","bF0","bD2","bD0") ) {
-  diagMCMC( codaObject=trainCoda , parName=parName, saveName=parName,saveType="pdf")
+for ( parName in c("alpha","bF2","bF0","bD2","bD0","f2i0","f0i0") ) {
+  diagMCMC( codaObject=trainCoda , parName=parName)
 }
 
-print(summary(trainMCMC,pars=c("alpha","bF0","bF2","bD2","bD0")))
+# add [saveName=parName,saveType="pdf"] to arguments of diagMCMC to save plots
+
+print(summary(trainMCMC,pars=c("alpha","bF0","bF2","bD2","bD0","f2i0","f0i0")))
 
 plotPost(trainCoda[,"alpha"])
 plotPost(trainCoda[,"bD0"],compVal=0)
