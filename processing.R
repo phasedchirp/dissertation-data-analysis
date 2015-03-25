@@ -93,20 +93,35 @@ for(i in 2:length(diss_training$response)){
 }
 diss_training[diss_training$trial==1,]$d2=NA
 
+# create block variable:
+diss_training$block = ifelse(diss_training$trial<=282,1,2)
+
 
 diss_training$group = relevel(diss_training$group, ref="f2")
+diss_testing$group = relevel(diss_testing$group, ref="f2")
 
 # Cue differences for Testing:
-# diss_testing$d0 = NA
-# for(i in 1:length(diss_testing$response)){
-#   #dRange = abs(diss_testing$f0A - diss_testing$f0B)
-#   diffA = diss_testing$f0[i]-diss_testing$f0A[i]
-#   diffB = diss_testing$f0[i]-diss_testing$f0B[i]
-#   diss_testing$d0[i] = diffA/diffB
-# }
-# diss_testing$d2 = NA
-# for(i in 1:length(diss_testing$response)){
-#   dRange = abs(diss_testing$f2A[i] - diss_testing$f2B[i])
-#   diff = diss_testing$f2[i]-diss_testing$f2A[i]
-#   diss_testing$d2[i] = diff/dRange
-# }
+diss_testing$d0A = diss_testing$f0-diss_testing$f0A
+diss_testing$d0B = diss_testing$f0-diss_testing$f0B
+diss_testing$d2A = diss_testing$f2-diss_testing$f2A
+diss_testing$d2B = diss_testing$f2-diss_testing$f2B
+
+d0_1 = 1/(with(diss_testing,ifelse(cat==catA, abs(d0A), abs(d0B)))+0.01)
+d0_2 =  1/(with(diss_testing,ifelse(cat==catA, abs(d0B), abs(d0A)))+0.01)
+diss_testing$d0 = d0_1/d0_2
+
+d2_1 =  1/(with(diss_testing,ifelse(cat==catA, abs(d2A), abs(d2B)))+0.01)
+d2_2 =  1/(with(diss_testing,ifelse(cat==catA, abs(d2B), abs(d2A)))+0.01)
+diss_testing$d2 = d2_1/d2_2
+
+
+testA = with(diss_testing,1/(abs(d0A)+0.01))
+testB = with(diss_testing,1/(abs(d0B)+0.01))
+diss_testing$testRat0 = testA/testB
+
+testA = with(diss_testing,1/(abs(d2A)+0.01))
+testB = with(diss_testing,1/(abs(d2B)+0.01))
+diss_testing$testRat2 = testA/testB
+
+rm(list=c("i","dropSubj","nSubj","subj","subject_list","temp","diss_data","testA","testB","d0_1","d0_2","d2_1","d2_2"))
+

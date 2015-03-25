@@ -1,85 +1,232 @@
+setwd("~/Dropbox/Dissertation/dissertation-data-analysis")
 library(coda)
 library(rstan)
 source("~/Dropbox/Programming/R/doing bayesian analysis/DBDA2Eprograms/DBDA2E-utilities2.R")
+source("processing.R")
 
-# define group indicators as:
-# F2 = ifelse(group=="f2",1,0), etc
+# ------------------------------------------------------------------------------
+# testing block (correct/incorrect version)
 
-dataList = with(diss_testing[!is.na(diss_testing$response),],
+dataList = with(na.omit(diss_testing),
                 list(N = length(response),
-                     F2 = ifelse(group=="f2",1,0),
-                     F0 = ifelse(group=="f0",1,0),
-                     d0 = ,
-                     d2 = ,
+                     G = 2,
+                     Nsubj = length(unique(subject)),
+                     S = as.numeric(subject),
+                     group = cbind(
+                         ifelse(group=="b",1,0),
+                         ifelse(group=="f0",1,0)),
+                     d0 = log(d0),
+                     d2 = log(d2),
+                     #d0 = log(testRat0),
+                     #d2 = log(testRat2),
                      y=response))
 
+dataList$iD0 = dataList$group*cbind(dataList$d0,dataList$d0)
+dataList$iD2 = dataList$group*cbind(dataList$d2,dataList$d2)
+dataList$iDiff = dataList$d0*dataList$d2
+dataList$gDI = dataList$group*cbind(dataList$iDiff,dataList$iDiff)
 
-
-testStan <- stan_model(file="stan-files/testing.stan", model_name="testing")
+testStan <- stan_model(file="stan-files/test2.stan", model_name="testing")
 
 testMCMC = sampling( object=testStan , 
-                      data = dataList , 
-                      chains = 3 ,
-                      iter = 3000 , 
-                      warmup = 500 , 
-                      thin = 1 )
+                     data = dataList , 
+                     chains = 3 ,
+                     iter = 6000 , 
+                     warmup = 3000 , 
+                     thin = 1 )
 
-traceplot(testMCMC,pars=c("alpha"))
+
+print(testMCMC,pars=testMCMC@model_pars[!testMCMC@model_pars%in%c("yInt","a")],
+      probs=c(0.025,0.5,0.975))
+traceplot(testMCMC,pars=testMCMC@model_pars[!testMCMC@model_pars%in%c("yInt","a")])
 
 testCoda = mcmc.list( lapply( 1:ncol(testMCMC) , 
                               function(x) { mcmc(as.array(testMCMC)[,x,]) } ) )
-diagMCMC( testCoda , parName=c("bF0") )
-
-print(summary(testMCMC,pars=c("alpha","bF0","bF2")))
-
-plotPost(testCoda[,1])
-plotPost(testCoda[,2])
-plotPost(testCoda[,3])
+parameterNames = testMCMC@model_pars[!testMCMC@model_pars%in%c("yInt","a")]
 
 
-#---------------------------------------------------------------------------------------------
-# define group indicators as:
-# F2 = ifelse(group=="f2",1,0), etc
+par(mfrow=c(1,3))
+plotPost(testCoda[,"bD0"],compVal=0)
+title("d0 main effect\n(ref = f2-biased)")
+plotPost(testCoda[,"gD0[1]"],compVal=0)
+title("balanced:d0")
+plotPost(testCoda[,"gD0[2]"],compVal=0)
+title("f0-biased:d0")
+
+plotPost(testCoda[,"bD2"],compVal=0)
+title("d2 main effect\n(ref = f2-biased)")
+plotPost(testCoda[,"gD2[1]"],compVal=0)
+title("balanced:d2")
+plotPost(testCoda[,"gD2[2]"],compVal=0)
+title("f0-biased:d2")
+
+# ------------------------------------------------------------------------------
+# testing block (A/B version)
+
+dataList = with(na.omit(diss_testing),
+                list(N = length(response),
+                     G = 2,
+                     Nsubj = length(unique(subject)),
+                     S = as.numeric(subject),
+                     group = cbind(
+                         ifelse(group=="b",1,0),
+                         ifelse(group=="f0",1,0)),
+                     #d0 = log(d0),
+                     #d2 = log(d2),
+                     d0 = log(testRat0),
+                     d2 = log(testRat2),
+                     y=resp.RESP-1))
+
+dataList$iD0 = dataList$group*cbind(dataList$d0,dataList$d0)
+dataList$iD2 = dataList$group*cbind(dataList$d2,dataList$d2)
+dataList$iDiff = dataList$d0*dataList$d2
+dataList$gDI = dataList$group*cbind(dataList$iDiff,dataList$iDiff)
+
+testStan2 <- stan_model(file="stan-files/test2.stan", model_name="testing")
+
+testMCMC2 = sampling( object=testStan2 , 
+                     data = dataList , 
+                     chains = 3 ,
+                     iter = 6000 , 
+                     warmup = 3000 , 
+                     thin = 1 )
+
+
+print(testMCMC2,pars=testMCMC2@model_pars[!testMCMC2@model_pars%in%c("yInt","a")],
+      probs=c(0.025,0.5,0.975))
+traceplot(testMCMC2,pars=testMCMC@model_pars[!testMCMC2@model_pars%in%c("yInt","a")])
+
+testCoda2 = mcmc.list( lapply( 1:ncol(testMCMC2) , 
+                              function(x) { mcmc(as.array(testMCMC2)[,x,]) } ) )
+parameterNames = testMCMC2@model_pars[!testMCMC2@model_pars%in%c("yInt","a")]
+
+
+par(mfrow=c(1,3))
+plotPost(trainCoda[,"bD0"],compVal=0)
+# note that F2 is the reference level when discussing
+title("d0 main effect\n(ref = f2-biased)")
+plotPost(trainCoda[,"gD0[1]"],compVal=0)
+title("balanced:d0")
+plotPost(trainCoda[,"gD0[2]"],compVal=0)
+title("f0-biased:d0")
+
+plotPost(trainCoda[,"bD2"],compVal=0)
+title("d2 main effect\n(ref = f2-biased)")
+plotPost(trainCoda[,"gD2[1]"],compVal=0)
+title("balanced:d2")
+plotPost(trainCoda[,"gD2[2]"],compVal=0)
+title("f0-biased:d2")
+
+#-------------------------------------------------------------------------------
+# Training (same-different version)
 
 dataList = with(na.omit(diss_training),
                 list(N = length(response),
+                     G = 2,
                      Nsubj = length(unique(subject)),
                      S = as.numeric(subject),
-                     F2 = ifelse(group=="f2",1,0),
-                     F0 = ifelse(group=="f0",1,0),
-                     d0 = d0,
-                     d2 = d2,
+                     group = cbind(
+                         ifelse(group=="b",1,0),
+                         ifelse(group=="f0",1,0)),
+                     d0 = abs(d0),
+                     d2 = (d2),
                      response = response,
-                     trial = trial,
+                     trialBlock = ifelse(trial<=282,1,0),
                      y=diff))
 
-# dataList = with(na.omit(diss_training),
-#                 list(N = length(response),
-#                      P = 6
-#                      Nsubj = length(unique(subject)),
-#                      S = as.numeric(subject),
-#                      Dat = cbind(ifelse(group=="f2",1,0),
-#                                  ifelse(group=="f0",1,0),
-#                                  d0,d2,response,trial)
-#                      y=diff))
+dataList$iD0 = dataList$group*cbind(dataList$d0,dataList$d0)
+dataList$iD2 = dataList$group*cbind(dataList$d2,dataList$d2)
+dataList$iBlock = dataList$group*cbind(dataList$trialBlock,dataList$trialBlock)
+dataList$iDiff = dataList$d0*dataList$d2
+
 
 trainStan <- stan_model(file="stan-files/training.stan", model_name="training")
 
 trainMCMC = sampling( object=trainStan , 
                       data = dataList , 
                       chains = 3 ,
-                      iter = 2000 , 
-                      warmup = 500 , 
-                      thin = 1 )
+                      iter = 100 , 
+                      warmup = 50 , 
+                      thin = 1)
 
-traceplot(trainMCMC,pars=c("alpha","bF2","bF0","bD2","bD0","f2i0","f0i0"))
+print(trainMCMC,pars=trainMCMC@model_pars[
+    !trainMCMC@model_pars%in%c("a","b0","b2")],probs=c(0.025,0.5,0.975))
+
+traceplot(trainMCMC,pars=trainMCMC@model_pars[!trainMCMC@model_pars%in%c("yInt","a")],
+          probs=c(0.025,0.5,0.975))
 
 trainCoda = mcmc.list( lapply( 1:ncol(trainMCMC) , 
-                              function(x) { mcmc(as.array(trainMCMC)[,x,]) } ) )
+                               function(x) { mcmc(as.array(trainMCMC)[,x,]) } ) )
 
-for ( parName in c("alpha","bF2","bF0","bD2","bD0","f2i0","f0i0") ) {
-  diagMCMC( codaObject=trainCoda , parName=parName)
-}
+parameterNames = varnames(trainCoda)[!grepl("(yInt)|(a\\[)",varnames(trainCoda))]
+
+# add [saveName=parName,saveType="pdf"] to arguments of diagMCMC to save plots
+
+
+par(mfrow=c(1,3))
+plotPost(trainCoda[,"bD0"],compVal=0)
+# note that F2 is the reference level when discussing
+title("d0 main effect\n(ref = f2-biased)")
+plotPost(trainCoda[,"gD0[1]"],compVal=0)
+title("balanced:d0")
+plotPost(trainCoda[,"gD0[2]"],compVal=0)
+title("f0-biased:d0")
+
+plotPost(trainCoda[,"bD2"],compVal=0)
+title("d0 main effect\n(ref = f2-biased)")
+plotPost(trainCoda[,"gD2[1]"],compVal=0)
+title("balanced:d0")
+plotPost(trainCoda[,"gD2[2]"],compVal=0)
+title("f0-biased:d0")
+#-------------------------------------------------------------------------------
+# Training (labeling version)
+
+dataList = with(na.omit(diss_training),
+                list(N = length(response),
+                     G = 2,
+                     Nsubj = length(unique(subject)),
+                     S = as.numeric(subject),
+                     group = cbind(
+                         ifelse(group=="b",1,0),
+                         ifelse(group=="f0",1,0)),
+                     d0 = f0,
+                     d2 = f2,
+                     response = prev,
+                     trialBlock = ifelse(trial<=282,1,0),
+                     y=response))
+
+dataList$iD0 = dataList$group*cbind(dataList$d0,dataList$d0)
+dataList$iD2 = dataList$group*cbind(dataList$d2,dataList$d2)
+dataList$iBlock = dataList$group*cbind(dataList$trialBlock,dataList$trialBlock)
+dataList$iDiff = dataList$d0*dataList$d2
+
+
+trainStan <- stan_model(file="stan-files/training4.stan", model_name="training")
+
+# trainOPT1 = optimizing(object=trainStan,data=dataList,as_vector=FALSE)
+# trainOPT2 = optimizing(object=trainStan,data=dataList,as_vector=FALSE)
+# trainOPT3 = optimizing(object=trainStan,data=dataList,as_vector=FALSE)
+# optInit = list(trainOPT1$par,trainOPT2$par,trainOPT3$par)
+
+trainMCMC = sampling( object=trainStan , 
+                      data = dataList , 
+                      chains = 3 ,
+                      iter = 100 , 
+                      warmup = 50 , 
+                      thin = 1)
+
+print(trainMCMC,pars=trainMCMC@model_pars[
+    !trainMCMC@model_pars%in%c("a","b0","b2")],probs=c(0.025,0.5,0.975))
+
+traceplot(trainMCMC,pars=trainMCMC@model_pars[!trainMCMC@model_pars%in%c("a","b0","b2")])
+
+plot(trainMCMC,pars=trainMCMC@model_pars[!trainMCMC@model_pars%in%c("a","b0","b2")])
+
+
+trainCoda = mcmc.list( lapply( 1:ncol(trainMCMC) , 
+                               function(x) { mcmc(as.array(trainMCMC)[,x,]) } ) )
+
+parameterNames = varnames(trainCoda)[!grepl("(yInt)|(a\\[)",varnames(trainCoda))]
 
 # add [saveName=parName,saveType="pdf"] to arguments of diagMCMC to save plots
 
@@ -88,28 +235,3 @@ print(summary(trainMCMC,pars=c("alpha","bF0","bF2","bD2","bD0","f2i0","f0i0")))
 plotPost(trainCoda[,"alpha"])
 plotPost(trainCoda[,"bD0"],compVal=0)
 plotPost(trainCoda[,"bD2"],compVal=0)
-
-
-#---------------------------------------------------------------------------------------------
-# messing around with no-intercept model
-
-
-dataList2 = with(diss_testing[!is.na(diss_testing$response),],
-                 list(N = length(response),
-                      F2 = ifelse(group=="f2",1,0),
-                      F0 = ifelse(group=="f0",1,0),
-                      Ba = ifelse(group=="b",1,0),
-                      y=response))
-
-
-testStan2 <- stan_model(file="stan-files/testing_NI",model_name="test no intercept")
-
-modelMCMC2 = sampling( object=testStan2 , 
-                      data = dataList2 , 
-                      chains = 3 ,
-                      iter = 3000 , 
-                      warmup = 500 , 
-                      thin = 1 )
-
-
-print(summary(modelMCMC2,pars=c("bBa","bF0","bF2")))
