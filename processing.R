@@ -70,6 +70,7 @@ colnames(diss_training)[7] = "response"
 # convert [1,2] to [0,1]
 diss_training$response = diss_training$response -1
 
+
 # create variable with previous response
 diss_training$prev = NA
 for(i in 2:length(diss_training$response)){
@@ -97,6 +98,7 @@ diss_training[diss_training$trial==1,]$d2=NA
 diss_training$block = ifelse(diss_training$trial<=282,1,2)
 
 
+
 diss_training$group = relevel(diss_training$group, ref="f2")
 diss_testing$group = relevel(diss_testing$group, ref="f2")
 
@@ -109,11 +111,12 @@ diss_testing$d2B = diss_testing$f2-diss_testing$f2B
 d0_1 = 1/(with(diss_testing,ifelse(cat==catA, abs(d0A), abs(d0B)))+0.01)
 d0_2 =  1/(with(diss_testing,ifelse(cat==catA, abs(d0B), abs(d0A)))+0.01)
 diss_testing$d0 = d0_1/d0_2
+diss_testing$d0 = scale(log(diss_testing$d0),scale=FALSE)
 
 d2_1 =  1/(with(diss_testing,ifelse(cat==catA, abs(d2A), abs(d2B)))+0.01)
 d2_2 =  1/(with(diss_testing,ifelse(cat==catA, abs(d2B), abs(d2A)))+0.01)
 diss_testing$d2 = d2_1/d2_2
-
+diss_testing$d2 = scale(log(diss_testing$d2),scale=FALSE)
 
 testA = with(diss_testing,1/(abs(d0A)+0.01))
 testB = with(diss_testing,1/(abs(d0B)+0.01))
@@ -123,5 +126,11 @@ testA = with(diss_testing,1/(abs(d2A)+0.01))
 testB = with(diss_testing,1/(abs(d2B)+0.01))
 diss_testing$testRat2 = testA/testB
 
-rm(list=c("i","dropSubj","nSubj","subj","subject_list","temp","diss_data","testA","testB","d0_1","d0_2","d2_1","d2_2"))
+
+# second response variable to deal with flips:
+flips = c("f0E1","f0E2","f0E3","f0E4","f0E6","f0E7","f0E8","f0OE2","f0OE4","bE6","bE9","bOE2","bOE3")
+diss_training$resp2 = with(diss_training,ifelse(subject%in%flips,-1*(response-1),response))
+diss_training$prev2 = with(diss_training,ifelse(subject%in%flips,-1*(prev-1),prev))
+
+rm(list=c("i","dropSubj","nSubj","subj","subject_list","temp","diss_data","testA","testB","d0_1","d0_2","d2_1","d2_2","flips"))
 

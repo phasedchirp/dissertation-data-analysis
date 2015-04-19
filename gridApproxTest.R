@@ -3,18 +3,18 @@ library(runjags)
 testCoda = mcmc.list( lapply( 1:ncol(testMCMC) , 
                               function(x) { mcmc(as.array(testMCMC)[,x,]) } ) )
 testCoda = combine.mcmc(testCoda)
-parameterNames = varnames(testCoda)[!grepl("a\\[",varnames(testCoda))]
+parameterNames = varnames(testCoda)[!grepl("((a|b0|b2)\\[)|(sigma)",varnames(testCoda))]
 
 range2 = range(dataList$d2,na.rm=T)
 comb = seq(range2[1],range2[2],0.02)
 
 #-------------------------------------------------------------------------------
 qPred2 = function(){
-  pred2 = numeric(length=length(comb))
+  pred2 = NULL
   for(i in 1:length(testCoda[,1])){
     pars = testCoda[i,parameterNames]
     pred2 = rbind(pred2,
-          (-pars[10]/(pars[3]+comb*pars[5]) - comb*pars[4]/(pars[3]+comb*pars[5])))
+          (-pars[1]/(pars[2]+comb*pars[6]) - comb*pars[3]/(pars[2]+comb*pars[6])))
   }
   out = data.frame(d2 = comb)
   out$lower = apply(pred2,2,quantile,probs=0.025)
@@ -29,7 +29,7 @@ qPredB = function(){
   for(i in 1:length(testCoda[,1])){
     pars = testCoda[i,parameterNames]
     predB = rbind(predB,
-          -(pars[10]+pars[1])/(pars[6]+pars[3]+comb*pars[5]) - comb*(pars[4]+pars[8])/(pars[6]+pars[3]+comb*pars[5]))
+          -(pars[4]+pars[1])/(pars[7]+pars[2]+comb*pars[6]) - comb*(pars[3]+pars[9])/(pars[6]+pars[2]+comb*pars[6]))
   }
   out = data.frame(d2 = comb)
   out$lower = apply(predB,2,quantile,probs=0.025)
@@ -44,7 +44,7 @@ qPred0 = function(){
   for(i in 1:length(testCoda[,1])){
     pars = testCoda[i,parameterNames]
     pred0 = rbind(pred0,
-          -(pars[10]+pars[2])/(pars[7]+pars[3]+comb*pars[5]) - comb*(pars[4]+pars[9])/(pars[7]+pars[3]+comb*pars[5]))
+          -(pars[5]+pars[2])/(pars[8]+pars[2]+comb*pars[6]) - comb*(pars[3]+pars[10])/(pars[7]+pars[2]+comb*pars[6]))
   }
   out = data.frame(d2 = comb)
   out$lower = apply(pred0,2,quantile,probs=0.025)

@@ -15,10 +15,9 @@ data {
     int<lower=0,upper=1> y[N] ;
 }
 parameters {
-    real alpha ;
-    //real a_mu ; // mean intercept
-    //real<lower=0,upper=20> sigma_a ; // intercept variance
-    //vector[Nsubj] a; // by-subject intercepts
+    real a_mu ; // mean intercept
+//     real<lower=0,upper=20> sigma_a ; // intercept variance
+//     vector[Nsubj] a; // by-subject intercepts
     vector[G] aG; //vector of group intercept adjustments
     real bD0 ; // d0 main effect
     real bD2 ; // d2 main effect
@@ -29,9 +28,8 @@ parameters {
     vector[G] gBlock ;
 }
 model {
-    alpha ~ normal(0,50) ;
-    //a_mu ~ normal(0,50) ;
-    //a ~ normal(a_mu,sigma_a) ;
+    a_mu ~ normal(0,50) ;
+//     a ~ normal(a_mu,sigma_a) ;
     bD0 ~ normal(0,50) ;
     bD2 ~ normal(0,50) ;
     aG ~ normal(0,50) ;
@@ -40,7 +38,13 @@ model {
     bDiff ~ normal(0,50) ;
     aBlock ~ normal(0,50) ;
     gBlock ~ normal(0,50) ;
-    y ~ bernoulli_logit(alpha + group*aG + trialBlock*aBlock + iBlock*gBlock + bD0*d0 + bD2*d2 + iD0*gD0 +iD2*gD2 + bDiff*iDiff) ;
+//     {
+//         vector[N] yInt ;
+//         for(i in 1:N){
+//            yInt[i]  <- a[S[i]] ;
+//         }
+//     y ~ bernoulli_logit(yInt + group*aG + trialBlock*aBlock + iBlock*gBlock + bD0*d0 + bD2*d2 + iD0*gD0 +iD2*gD2 + bDiff*iDiff) ;
+//     }
     // non-random intercept version:
-//     y ~ bernoulli_logit(alpha + group*aG + bD0*d0 + bD2*d2 + iD0*gD0 +iD2*gD0);
+    y ~ bernoulli_logit(a_mu + group*aG + trialBlock*aBlock + iBlock*gBlock + bD0*d0 + bD2*d2 + iD0*gD0 +iD2*gD2 + bDiff*iDiff);
 }

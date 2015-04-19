@@ -13,41 +13,40 @@ data {
     int<lower=0,upper=1> y[N] ; 
 }
 parameters {
+    real mu_a ;
+    real<lower=0,upper=50> sigma_a ;
+    vector[Nsubj] a; // random intercept adjustments
+    real b0_mu ;
+    real<lower=0,upper=20> sigma_b0 ;
+    vector[Nsubj] b0 ;
+    real b2_mu ;
+    real<lower=0,upper=20> sigma_b2 ;
+    vector[Nsubj] b2 ;
+    // within subjects effects:
     vector[G] aG; //vector of group intercept adjustments
-    real bD0 ;
-    real bD2 ;
     real bDiff ;
     vector[G] gD0 ;
     vector[G] gD2 ;
 //     vector[G] gDiff ;
-    real mu_a ;
-    real<lower=0,upper=50> sigma_a ;
-    //real alpha ; // intercept
-    vector[Nsubj] a; // random intercept adjustments
 }
-// transformed parameters{
-// //     vector[N] yHat ;
-//     vector[N] yInt ;
-//     for(i in 1:N){
-//        yInt[i]  <- a[S[i]] ;
-//     }
-// }
 model {
-    mu_a ~ normal(0,50) ;
+    mu_a ~ normal(0,10) ;
     a ~ normal(mu_a,sigma_a) ;
-    bD0 ~ normal(0,100) ;
-    bD2 ~ normal(0,100) ;
+    b0_mu ~ normal(0,10) ;
+    b0 ~ normal(b0_mu,sigma_b0) ;
+    b2_mu ~ normal(0,10) ;
+    b2 ~ normal(b2_mu,sigma_b2) ;
+    // Between subjects priors:
     bDiff ~ normal(0,100) ;
     aG ~ normal(0,100) ;
     gD0 ~ normal(0,100) ;
     gD2 ~ normal(0,100) ;
 //     gDiff ~ normal(0,100) ;
-//     y ~ bernoulli_logit(yInt + group*aG + bD0*d0 + bD2*d2 + iD0*gD0 +iD2*gD2 + bDiff*iDiff + gDI*gDiff) ;
     {
-        vector[N] yInt ;
+        vector[N] ranEF ;
         for(i in 1:N){
-           yInt[i]  <- a[S[i]] ; 
+           ranEF[i]  <- a[S[i]] + b0[S[i]]*d0[i] + b2[S[i]]*d2[i] ; 
         }
-        y ~ bernoulli_logit(yInt + group*aG + bD0*d0 + bD2*d2 + iD0*gD0 + iD2*gD2 + bDiff*iDiff);
+        y ~ bernoulli_logit(ranEF + group*aG + iD0*gD0 + iD2*gD2 + bDiff*iDiff);
     }
 }
