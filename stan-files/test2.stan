@@ -4,7 +4,7 @@ data {
     matrix[N,G] group; // group factors
     matrix[N,G] iD0 ; // interaction of group and d0
     matrix[N,G] iD2 ; // interaction of group and d2
-//     matrix[N,G] gDI ; // interaction of group and cue interaction
+    matrix[N,G] gDI ; // interaction of group and cue interaction
     int<lower=1> Nsubj; // number of participants
     int<lower=1,upper=Nsubj>S[N] ; // subject
     vector[N] d0 ; // f0 difference
@@ -27,7 +27,7 @@ parameters {
     real bDiff ;
     vector[G] gD0 ;
     vector[G] gD2 ;
-//     vector[G] gDiff ;
+    vector[G] gDiff ;
 }
 model {
     mu_a ~ normal(0,10) ;
@@ -37,16 +37,16 @@ model {
     b2_mu ~ normal(0,10) ;
     b2 ~ normal(b2_mu,sigma_b2) ;
     // Between subjects priors:
-    bDiff ~ normal(0,100) ;
-    aG ~ normal(0,100) ;
-    gD0 ~ normal(0,100) ;
-    gD2 ~ normal(0,100) ;
-//     gDiff ~ normal(0,100) ;
+    bDiff ~ normal(0,50) ;
+    aG ~ normal(0,50) ;
+    gD0 ~ normal(0,50) ;
+    gD2 ~ normal(0,50) ;
+    gDiff ~ normal(0,50) ;
     {
         vector[N] ranEF ;
         for(i in 1:N){
            ranEF[i]  <- a[S[i]] + b0[S[i]]*d0[i] + b2[S[i]]*d2[i] ; 
         }
-        y ~ bernoulli_logit(ranEF + group*aG + iD0*gD0 + iD2*gD2 + bDiff*iDiff);
+        y ~ bernoulli_logit(ranEF + group*aG + iD0*gD0 + iD2*gD2 + bDiff*iDiff + gDI*gDiff);
     }
 }

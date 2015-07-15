@@ -1,5 +1,3 @@
-// Try non-common degrees of freedom parameters for b0,b2.
-// Also consider by-group d0*d2 interaction effects.
 data {
     int<lower=0> G ; //number of groups
     int<lower=1> N ;
@@ -13,8 +11,6 @@ data {
     vector[N] iDiff ; // interaction of differences
     vector<lower=0,upper=1>[N] trialBlock;
     int<lower=0,upper=1> y[N] ;
-//     int<lower=0> gridSize ;
-//     vector[gridSize] grid ;
 }
 parameters {
     // fixed-ish effects:
@@ -22,73 +18,88 @@ parameters {
     real b0[G] ; // mean d0 effect
     real b2[G] ; // mean d2 effect
     real bD[G] ; // interaction of differences
-    real bResp ; // response category
+//     real bResp ; // response category
     real aBlock[G] ; // block effect
     
     // random-ish effects:
     // by-subject intercepts
-    real<lower=1> n_a[G] ;
-    real<lower=0,upper=20> sigma_a[G] ;
+    real<lower=0,upper=20> sigma_a ;
+//     real<lower=0,upper=20> sigma_a[G] ;
     real a[Nsubj] ;
     // by-subject d0 effects
-    real<lower=1> n0[G] ;
-    real<lower=0,upper=20> sigma_b0[G] ;
+    real<lower=0,upper=20> sigma_b0 ;
+//     real<lower=0,upper=20> sigma_b0[G] ;
     real a0[Nsubj] ;
     // by-subject d2 effects
-    real<lower=1> n2[G] ;
-    real<lower=0,upper=20> sigma_b2[G] ;
+    real<lower=0,upper=20> sigma_b2 ;
+//     real<lower=0,upper=20> sigma_b2[G] ;
     real a2[Nsubj] ;
     // by subject response category effects
-    real<lower=0> sigma_Resp ;
-    vector[Nsubj] aResp ;   
+//     real<lower=0> sigma_Resp ;
+//     vector[Nsubj] aResp ;   
     // by-subject interaction of differences
-    real<lower=0> sigma_D ;
-    vector[Nsubj] aD ;
+//     real<lower=0> sigma_D ;
+//     vector[Nsubj] aD ;
+    // intercept degrees of freedom:
+    real<lower=0> nA[G] ;
 }
 model {
     // intercept:
     alpha ~ normal(0,50) ;
-    n_a ~ exponential(0.1) ;
+//     nA ~ exponential(0.05) ;
+    nA ~ gamma(2,0.1) ;
     for(i in 1:Nsubj){
-//         a[i] ~ normal(alpha[gID[i]],sigma_a[gID[i]]) ;
-        a[i] ~ student_t(n_a[gID[i]],alpha[gID[i]],sigma_a[gID[i]]) ;
+         a[i] ~ student_t(nA[gID[i]],alpha[gID[i]],sigma_a) ;
+//         a[i] ~ normal(alpha[gID[i]],sigma_a) ;
     }
     // d0 effects:
     b0 ~ normal(0,50) ;
-    n0 ~ exponential(0.1) ;
     for(i in 1:Nsubj){
-//         a0[i] ~ normal(b0[gID[i]],sigma_b0[gID[i]]) ;
-        a0[i] ~ student_t(n0[gID[i]],b0[gID[i]],sigma_b0[gID[i]]) ;
+        a0[i] ~ normal(b0[gID[i]],sigma_b0) ;
     }
     // d2 effects:
     b2 ~ normal(0,50) ;
-    n2 ~ exponential(0.1) ;
     for(i in 1:Nsubj){
-//         a2[i] ~ normal(b2[gID[i]],sigma_b2[gID[i]]) ;
-        a2[i] ~ student_t(n2[gID[i]],b2[gID[i]],sigma_b2[gID[i]]) ;
+        a2[i] ~ normal(b2[gID[i]],sigma_b2) ;
     }
     bD ~ normal(0,50) ;
-    for(i in 1:Nsubj){
-	aD[i] ~ normal(bD[gID[i]],sigma_D) ;
-    }
+//     for(i in 1:Nsubj){
+// 	aD[i] ~ normal(bD[gID[i]],sigma_D) ;
+//     }
     aBlock ~ normal(0,50) ;
-    bResp ~ normal(0,50) ;
-    aResp ~ normal(bResp,sigma_Resp) ;
+//     bResp ~ normal(0,50) ;
+//     aResp ~ normal(bResp,sigma_Resp) ;
+//      + aResp[S[i]]*response[i]
+//      aD[S[i]]*iDiff[i] 
     {
         vector[N] yHat ;
         for(i in 1:N){
-           yHat[i]  <- a[S[i]] + a0[S[i]]*d0[i] + a2[S[i]]*d2[i] + aD[S[i]]*iDiff[i] + aBlock[group[i]]*trialBlock[i] + aResp[S[i]]*response[i] ;
+           yHat[i]  <- a[S[i]] + a0[S[i]]*d0[i] + a2[S[i]]*d2[i] + bD[group[i]]*iDiff[i] + aBlock[group[i]]*trialBlock[i] ;
         }
     y ~ bernoulli_logit( yHat );
     }
 }
 generated quantities {
     // Parameter differences
-    real diff_alpha ;
-    real diff_b0 ;
-    real diff_i ;
-    diff_alpha <- alpha[3] - alpha[1] ; 
-    diff_b0 <- b0[3] - b0[1] ;
-    diff_i <- bD[3] - bD[1];
+    real diff_F0 ;
+    real diff_B ;
+    real diff_b0b ;
+    real diff_b0f ;
+    real diff_b2b ;
+    real diff_b2f ;
+    real diff_ib ;
+    real diff_if ;
+    real diff_bb ;
+    real diff_bf ;
+    diff_F0 <- alpha[3] - alpha[1] ;
+    diff_B <- alpha[2] - alpha[1] ;
+    diff_b0b <- b0[2] - b0[1] ;
+    diff_b0f <- b0[3] - b0[1] ;
+    diff_b2b <- b2[2] - b2[1] ;
+    diff_b2f <- b2[3] - b2[1] ;
+    diff_ib <- bD[2] - bD[1];
+    diff_if <- bD[3] - bD[1];
+    diff_bb <- aBlock[2] - aBlock[1] ;
+    diff_bf <- aBlock[3] - aBlock[1] ;
 }
 

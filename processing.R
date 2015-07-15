@@ -28,9 +28,9 @@ diss_data = data.frame(
 #     diss_data = rbind(diss_data,temp)
 #   }
 # }
-subject_list = list.files('~/Dropbox/Dissertation/diss_exp_results',pattern='*.csv')
+subject_list = list.files('diss_exp_results',pattern='*.csv')
 for(subj in subject_list){
-    temp = read.csv(paste('~/Dropbox/Dissertation/diss_exp_results/',subj,sep=''))[,c(1,28:41,46,47,51,54)]
+    temp = read.csv(paste('diss_exp_results/',subj,sep=''))[,c(1,28:41,46,47,51,54)]
     temp$subject = gsub(".csv",'',subj)
     diss_data = rbind(diss_data,temp)
 }
@@ -52,7 +52,8 @@ diss_testing = droplevels(subset(diss_data,Running=="testList"))[,-c(6,18,19)]
 # t2 = xtabs(~response+subject,data=diss_testing)
 # round(100*t2[1,]/60,1)
 
-# subjects to exclude from analysis (see subject_notes.txt for reasons)
+# Subjects to exclude from analysis
+# These three show extremely high rates of response bias
 dropSubj = c("f2OE1","f0OE1","f2OE8")
 
 
@@ -79,6 +80,16 @@ for(i in 2:length(diss_training$response)){
 diss_training[diss_training$trial==1,]$prev=NA
 
 diss_training$diff = ifelse(diss_training$response == diss_training$prev,1,0)
+
+
+diss_training$prevCat = NA
+for(i in 2:length(diss_training$response)){
+  diss_training$prevCat[i] = diss_training$cat[i-1]
+}
+diss_training[diss_training$trial==1,]$prevCat=NA
+
+diss_training$diff2 = ifelse(diss_training$cat == diss_training$prevCat,1,0)
+
 
 # create variable with F0 difference
 diss_training$d0 = NA
@@ -110,13 +121,13 @@ diss_testing$d2B = diss_testing$f2-diss_testing$f2B
 
 d0_1 = 1/(with(diss_testing,ifelse(cat==catA, abs(d0A), abs(d0B)))+0.01)
 d0_2 =  1/(with(diss_testing,ifelse(cat==catA, abs(d0B), abs(d0A)))+0.01)
-diss_testing$d0 = d0_1/d0_2
-diss_testing$d0 = scale(log(diss_testing$d0),scale=FALSE)
+diss_testing$d0 = log(d0_1/d0_2)
+diss_testing$d0 = diss_testing$d0-mean(diss_testing$d0,na.rm=TRUE)
 
 d2_1 =  1/(with(diss_testing,ifelse(cat==catA, abs(d2A), abs(d2B)))+0.01)
 d2_2 =  1/(with(diss_testing,ifelse(cat==catA, abs(d2B), abs(d2A)))+0.01)
-diss_testing$d2 = d2_1/d2_2
-diss_testing$d2 = scale(log(diss_testing$d2),scale=FALSE)
+diss_testing$d2 = log(d2_1/d2_2)
+diss_testing$d2 = diss_testing$d2-mean(diss_testing$d2,na.rm=TRUE)
 
 testA = with(diss_testing,1/(abs(d0A)+0.01))
 testB = with(diss_testing,1/(abs(d0B)+0.01))
@@ -127,7 +138,7 @@ testB = with(diss_testing,1/(abs(d2B)+0.01))
 diss_testing$testRat2 = testA/testB
 
 
-# second response variable to deal with flips:
+# second response variable to deal with flips (not really used):
 flips = c("f0E1","f0E2","f0E3","f0E4","f0E6","f0E7","f0E8","f0OE2","f0OE4","bE6","bE9","bOE2","bOE3")
 diss_training$resp2 = with(diss_training,ifelse(subject%in%flips,-1*(response-1),response))
 diss_training$prev2 = with(diss_training,ifelse(subject%in%flips,-1*(prev-1),prev))
